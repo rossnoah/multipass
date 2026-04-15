@@ -155,9 +155,11 @@ auto make_cloud_init_vendor_config(const mp::SSHKeyProvider& key_provider,
     config["timezone"] = request->time_zone();
     config["system_info"]["default_user"]["name"] = username;
 
-    // Pollinate is not available as a RPM package and also dependencies that are inherent to
-    // Ubuntu/Debian systems
-    if (request->image() != "fedora")
+    // Pollinate is only available for Ubuntu/Debian-family systems; skip it on RPM- and
+    // Arch-based images where the package and its dependencies are not available.
+    static const std::unordered_set<std::string> non_pollinate_images{
+        "fedora", "alma", "almalinux", "rocky", "rockylinux", "arch", "archlinux"};
+    if (!non_pollinate_images.contains(request->image()))
     {
         config["packages"].push_back("pollinate");
 

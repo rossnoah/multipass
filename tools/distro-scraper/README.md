@@ -51,6 +51,9 @@ The scraper uses Python entry points for extensibility. Each distribution scrape
 [project.entry-points."dist_scraper.scrapers"]
 debian = "scraper.scrapers.debian:DebianScraper"
 fedora = "scraper.scrapers.fedora:FedoraScraper"
+almalinux = "scraper.scrapers.almalinux:AlmaLinuxScraper"
+rocky = "scraper.scrapers.rocky:RockyScraper"
+arch = "scraper.scrapers.arch:ArchScraper"
 ```
 
 ### Adding a New Scraper

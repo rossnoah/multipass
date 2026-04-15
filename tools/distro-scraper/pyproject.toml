@@ -21,6 +21,9 @@ distro-scraper = "scraper.cli:main"
 [project.entry-points."dist_scraper.scrapers"]
 debian = "scraper.scrapers.debian:DebianScraper"
 fedora = "scraper.scrapers.fedora:FedoraScraper"
+almalinux = "scraper.scrapers.almalinux:AlmaLinuxScraper"
+rocky = "scraper.scrapers.rocky:RockyScraper"
+arch = "scraper.scrapers.arch:ArchScraper"
 
 [tool.setuptools.packages.find]
 where = ["."]

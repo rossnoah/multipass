@@ -40,5 +40,62 @@
         "size": 532217856
       }
     }
+  },
+  "AlmaLinux": {
+    "aliases": "alma, almalinux",
+    "os": "AlmaLinux",
+    "release": "9",
+    "release_codename": "9",
+    "release_title": "9",
+    "items": {
+      "x86_64": {
+        "image_location": "https://example.com/alma-9-x86_64.qcow2",
+        "id": "alma-9-hash-x86_64",
+        "version": "9",
+        "size": 592445440
+      },
+      "arm64": {
+        "image_location": "https://example.com/alma-9-arm64.qcow2",
+        "id": "alma-9-hash-arm64",
+        "version": "9",
+        "size": 444006400
+      }
+    }
+  },
+  "Rocky": {
+    "aliases": "rocky, rockylinux",
+    "os": "Rocky",
+    "release": "9",
+    "release_codename": "9",
+    "release_title": "9",
+    "items": {
+      "x86_64": {
+        "image_location": "https://example.com/rocky-9-x86_64.qcow2",
+        "id": "rocky-9-hash-x86_64",
+        "version": "9",
+        "size": 648806400
+      },
+      "arm64": {
+        "image_location": "https://example.com/rocky-9-arm64.qcow2",
+        "id": "rocky-9-hash-arm64",
+        "version": "9",
+        "size": 529268736
+      }
+    }
+  },
+  "Arch": {
+    "aliases": "arch, archlinux",
+    "os": "Arch",
+    "release": "rolling",
+    "release_codename": "rolling",
+    "release_title": "Rolling",
+    "items": {
+      "x86_64": {
+        "image_location": "https://example.com/arch-latest-x86_64.qcow2",
+        "id": "arch-latest-hash",
+        "version": "latest",
+        "size": 542651904
+      }
+    }
   }
 }

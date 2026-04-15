@@ -121,6 +121,28 @@ TEST_F(CustomImageHost, allInfoForNoRemoteReturnsOneAliasMatch)
     EXPECT_EQ(images_info.size(), 1);
 }
 
+TEST_F(CustomImageHost, resolvesAliasesForAllDistros)
+{
+    EXPECT_CALL(mock_url_downloader, download(_, _)).WillOnce(Return(payload));
+    mp::CustomVMImageHost host{&mock_url_downloader};
+
+    host.update_manifests(false);
+
+    const auto host_arch = QSysInfo::currentCpuArchitecture().toStdString();
+
+    EXPECT_EQ(host.all_info_for(make_query("debian", "")).size(), 1u);
+    EXPECT_EQ(host.all_info_for(make_query("fedora", "")).size(), 1u);
+    EXPECT_EQ(host.all_info_for(make_query("alma", "")).size(), 1u);
+    EXPECT_EQ(host.all_info_for(make_query("almalinux", "")).size(), 1u);
+    EXPECT_EQ(host.all_info_for(make_query("rocky", "")).size(), 1u);
+    EXPECT_EQ(host.all_info_for(make_query("rockylinux", "")).size(), 1u);
+
+    // Arch only ships x86_64 upstream; on other architectures the manifest
+    // entry is skipped via UnsupportedArchException, so the alias does not resolve.
+    const size_t expected_arch_matches = (host_arch == "x86_64") ? 1u : 0u;
+    EXPECT_EQ(host.all_info_for(make_query("arch", "")).size(), expected_arch_matches);
+}
+
 TEST_F(CustomImageHost, supportedRemotesReturnsExpectedValues)
 {
     EXPECT_CALL(mock_url_downloader, download(_, _)).WillOnce(Return(payload));
