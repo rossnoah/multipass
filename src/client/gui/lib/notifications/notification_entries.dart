@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpdart/fpdart.dart' hide State;
 import 'package:grpc/grpc.dart' hide ConnectionState;
+import 'package:protobuf/protobuf.dart';
 
+import '../catalogue/launch_form.dart';
 import '../extensions.dart';
+import '../generated/multipass.pb.dart';
 import '../grpc_client.dart';
 import '../sidebar.dart';
 import 'notifications_list.dart';
@@ -146,6 +149,96 @@ class ErrorNotification extends SimpleNotification {
         );
 }
 
+/// Error notification for the disk-below-image-minimum case, with a one-click
+/// retry that resubmits the same launch request at the image's minimum size.
+///
+/// After the user clicks Retry the notification flips into a "Retrying…" state
+/// in-place so they get immediate feedback; the new LaunchingNotification then
+/// appears alongside it as the relaunch progresses.
+class DiskTooSmallNotification extends ConsumerStatefulWidget {
+  final String errorText;
+  final String minDiskSize;
+  final int minBytes;
+  final LaunchRequest launchRequest;
+  final List<MountRequest> mountRequests;
+
+  const DiskTooSmallNotification({
+    super.key,
+    required this.errorText,
+    required this.minDiskSize,
+    required this.minBytes,
+    required this.launchRequest,
+    required this.mountRequests,
+  });
+
+  @override
+  ConsumerState<DiskTooSmallNotification> createState() =>
+      _DiskTooSmallNotificationState();
+}
+
+class _DiskTooSmallNotificationState
+    extends ConsumerState<DiskTooSmallNotification> {
+  bool _retrying = false;
+
+  void _onRetry() {
+    if (_retrying) return;
+    setState(() => _retrying = true);
+
+    final retry = widget.launchRequest.deepCopy();
+    retry.diskSpace = '${widget.minBytes}B';
+    final mounts = widget.mountRequests.map((m) => m.deepCopy()).toList();
+
+    // Fire the relaunch first so the new LaunchingNotification is on screen
+    // before this one disappears — gives the user uninterrupted feedback.
+    initiateLaunchFlow(ref, retry, mounts);
+
+    // Brief visible "Retrying…" state before this notification is dismissed.
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (mounted) closeNotification(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_retrying) {
+      return SimpleNotification(
+        barColor: Colors.blue,
+        closeable: false,
+        icon: const CircularProgressIndicator(
+          color: Colors.blue,
+          strokeAlign: -2,
+          strokeWidth: 3.5,
+        ),
+        child: Text(
+          'Retrying ${widget.launchRequest.instanceName} with '
+          '${widget.minDiskSize} disk…',
+        ),
+      );
+    }
+
+    return SimpleNotification(
+      barColor: Colors.red,
+      icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.errorText),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: _onRetry,
+                child: Text('Retry with ${widget.minDiskSize} disk'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class SuccessNotification extends TimeoutNotification {
   const SuccessNotification({super.key, required super.child})
       : super(
@@ -191,16 +284,35 @@ class OperationNotification extends StatelessWidget {
   }
 }
 
+// Matches messages like:
+//   "Requested disk (5368709120 bytes) below minimum for this image (10737418240 bytes)"
+// Captures the minimum size in bytes so the GUI can offer a one-click retry.
+final _diskTooSmallPattern = RegExp(
+  r'Requested disk \((\d+) bytes\) below minimum for this image \((\d+) bytes\)',
+);
+
+String _formatBytesAsGb(int bytes) {
+  final gb = bytes / (1024 * 1024 * 1024);
+  // Whole GB when possible, otherwise one decimal — most cloud images are whole-GB.
+  return gb == gb.roundToDouble()
+      ? '${gb.toInt()}G'
+      : '${gb.toStringAsFixed(1)}G';
+}
+
 class LaunchingNotification extends ConsumerWidget {
   final Stream<Either<LaunchReply, MountReply>?> stream;
   final Completer<void> cancelCompleter;
   final String name;
+  final LaunchRequest? launchRequest;
+  final List<MountRequest> mountRequests;
 
   const LaunchingNotification({
     super.key,
     required this.stream,
     required this.cancelCompleter,
     required this.name,
+    this.launchRequest,
+    this.mountRequests = const [],
   });
 
   @override
@@ -211,7 +323,24 @@ class LaunchingNotification extends ConsumerWidget {
         final error = snapshot.error;
         if (error != null) {
           final grpcErrorMessage = error is GrpcError ? error.message : null;
-          return ErrorNotification(text: grpcErrorMessage ?? error.toString());
+          final errorText = grpcErrorMessage ?? error.toString();
+
+          // Disk-too-small is recoverable: offer a one-click retry at the image's
+          // minimum size instead of asking the user to fish through Configure.
+          final match = _diskTooSmallPattern.firstMatch(errorText);
+          if (match != null && launchRequest != null) {
+            final minBytes = int.parse(match.group(2)!);
+            final newSize = _formatBytesAsGb(minBytes);
+            return DiskTooSmallNotification(
+              errorText: errorText,
+              minDiskSize: newSize,
+              minBytes: minBytes,
+              launchRequest: launchRequest!,
+              mountRequests: mountRequests,
+            );
+          }
+
+          return ErrorNotification(text: errorText);
         }
 
         if (snapshot.connectionState == ConnectionState.done) {

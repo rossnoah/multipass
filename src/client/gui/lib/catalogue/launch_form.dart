@@ -408,6 +408,8 @@ void initiateLaunchFlow(
     name: launchRequest.instanceName,
     cancelCompleter: cancelCompleter,
     stream: launchStream,
+    launchRequest: launchRequest,
+    mountRequests: mountRequests,
   );
 
   ref.read(notificationsProvider.notifier).add(notification);

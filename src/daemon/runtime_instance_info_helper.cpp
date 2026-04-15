@@ -65,7 +65,7 @@ private:
                           seen[\$fsid]=1
                         fi
                       done < <(
-                        df -B1 -t ext4 -t btrfs -t vfat --output=source,used,target \
+                        df -B1 -t ext4 -t btrfs -t vfat -t xfs --output=source,used,target \
                         | tail -n +2
                       )
                       printf \"%d\" \$sum
@@ -83,7 +83,7 @@ private:
                           seen[\$fsid]=1
                         fi
                       done < <(
-                        df -B1 -t ext4 -t btrfs -t vfat --output=source,size,target \
+                        df -B1 -t ext4 -t btrfs -t vfat -t xfs --output=source,size,target \
                         | tail -n +2
                       )
                       printf \"%d\" \$sum
