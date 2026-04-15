@@ -27,6 +27,9 @@
 #include <multipass/version.h>
 
 #include <QDir>
+#include <chrono>
+#include <thread>
+
 #include <QEventLoop>
 #include <QFile>
 #include <QNetworkDiskCache>
@@ -84,6 +87,29 @@ void wait_for_reply(QNetworkReply* reply, QTimer& download_timeout)
     event_loop.exec();
 }
 
+// Errors that are typically transient (server CDN flakiness, brief network
+// blips). The downloader retries the request from network for these before
+// giving up and falling through to the cache.
+constexpr int max_transient_retries = 3;
+constexpr std::chrono::milliseconds retry_backoff{750};
+
+bool is_transient_network_error(QNetworkReply::NetworkError err)
+{
+    switch (err)
+    {
+    case QNetworkReply::RemoteHostClosedError:
+    case QNetworkReply::TemporaryNetworkFailureError:
+    case QNetworkReply::TimeoutError:
+    case QNetworkReply::NetworkSessionFailedError:
+    case QNetworkReply::ServiceUnavailableError:
+    case QNetworkReply::InternalServerError:
+    case QNetworkReply::UnknownServerError:
+        return true;
+    default:
+        return false;
+    }
+}
+
 template <typename ProgressAction, typename DownloadAction, typename ErrorAction, typename Time>
 QByteArray download(QNetworkAccessManager* manager,
                     const Time& timeout,
@@ -93,7 +119,8 @@ QByteArray download(QNetworkAccessManager* manager,
                     ErrorAction&& on_error,
                     const std::atomic_bool& abort_download,
                     const QNetworkRequest::CacheLoadControl cache_load_control =
-                        QNetworkRequest::CacheLoadControl::PreferNetwork)
+                        QNetworkRequest::CacheLoadControl::PreferNetwork,
+                    int retries_left = max_transient_retries)
 {
     QTimer download_timeout;
     download_timeout.setInterval(timeout);
@@ -154,6 +181,28 @@ QByteArray download(QNetworkAccessManager* manager,
             // Log at error level since we are giving up
             mpl::error(category, "Failed to get {}: {}", adjusted_url.toString(), error_string);
             throw mp::DownloadException{adjusted_url.toString().toStdString(), error_string};
+        }
+        // For flaky-CDN style errors, retry from network a few times before
+        // falling back to cache. Some mirrors (e.g. AlmaLinux's Varnish CDN)
+        // intermittently close large transfers, but the next attempt usually
+        // succeeds.
+        if (is_transient_network_error(error_code) && retries_left > 0)
+        {
+            mpl::warn(category,
+                      "Transient error fetching {} ({}); retrying ({} left)",
+                      adjusted_url.toString(),
+                      error_string,
+                      retries_left);
+            std::this_thread::sleep_for(retry_backoff);
+            return ::download(manager,
+                              timeout,
+                              adjusted_url,
+                              on_progress,
+                              on_download,
+                              on_error,
+                              abort_download,
+                              cache_load_control,
+                              retries_left - 1);
         }
         // Log at warning level when we are going to retry
         mpl::warn(category,
