@@ -103,6 +103,11 @@ QByteArray download(QNetworkAccessManager* manager,
     QNetworkRequest request{adjusted_url};
     request.setRawHeader("Connection", "Keep-Alive");
     request.setAttribute(QNetworkRequest::HttpPipeliningAllowedAttribute, true);
+    // Qt's HTTP/2 implementation interacts poorly with some upstream mirror
+    // CDNs (e.g. repo.almalinux.org's Varnish front-end aborts large transfers
+    // mid-stream). Cloud images are big monolithic downloads where HTTP/2
+    // multiplexing buys nothing, so force HTTP/1.1 + keep-alive instead.
+    request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
     request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, cache_load_control);
     request.setHeader(QNetworkRequest::UserAgentHeader,
                       QString::fromStdString(fmt::format("Multipass/{} ({}; {})",
