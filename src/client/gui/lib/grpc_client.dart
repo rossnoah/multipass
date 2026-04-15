@@ -196,7 +196,7 @@ class GrpcClient {
   Future<FindReply> find() {
     return doRpc(
       _client.find,
-      FindRequest(),
+      FindRequest(allowUnsupported: true),
     ).then((r) => r!);
   }
 

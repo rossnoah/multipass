@@ -40,15 +40,24 @@ class ImageCard extends ConsumerWidget {
       });
     }
 
-    return Container(
+    final disabledReason = selectedImage.hasDisabledReason() &&
+            selectedImage.disabledReason.isNotEmpty
+        ? selectedImage.disabledReason
+        : null;
+    final isDisabled = disabledReason != null;
+
+    final card = Container(
       width: width,
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xff707070)),
+        border: Border.all(
+          color: isDisabled ? const Color(0xffbdbdbd) : const Color(0xff707070),
+        ),
+        color: isDisabled ? const Color(0xfff5f5f5) : null,
       ),
       padding: const EdgeInsets.all(16),
       child: DefaultTextStyle(
-        style: const TextStyle(
-          color: Colors.black,
+        style: TextStyle(
+          color: isDisabled ? const Color(0xff707070) : Colors.black,
           fontFamily: 'Ubuntu',
           fontSize: 16,
         ),
@@ -63,18 +72,24 @@ class ImageCard extends ConsumerWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      SvgPicture.asset(
-                        info.logoAsset,
-                        height: 24,
-                        fit: BoxFit.contain,
-                        semanticsLabel: '${info.displayTitle} logo',
+                      Opacity(
+                        opacity: isDisabled ? 0.5 : 1.0,
+                        child: SvgPicture.asset(
+                          info.logoAsset,
+                          height: 24,
+                          fit: BoxFit.contain,
+                          semanticsLabel: '${info.displayTitle} logo',
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         info.displayTitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 24,
+                          color: isDisabled
+                              ? const Color(0xff707070)
+                              : Colors.black,
                         ),
                       ),
                     ],
@@ -87,12 +102,41 @@ class ImageCard extends ConsumerWidget {
             }),
             const SizedBox(height: 16),
             const Spacer(),
+            if (isDisabled) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: Color(0xff707070),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      disabledReason,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w300,
+                        color: Color(0xff707070),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
                 color: const Color(0xfff5f5f5),
                 border: Border(
-                  bottom: BorderSide(color: Colors.black, width: 1),
+                  bottom: BorderSide(
+                    color: isDisabled
+                        ? const Color(0xffbdbdbd)
+                        : Colors.black,
+                    width: 1,
+                  ),
                 ),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -112,8 +156,9 @@ class ImageCard extends ConsumerWidget {
                           ),
                         ))
                     .toList(),
-                onChanged: versions.length > 1
-                    ? (String? newValue) {
+                onChanged: (isDisabled || versions.length <= 1)
+                    ? null
+                    : (String? newValue) {
                         if (newValue != null) {
                           final newImage = versions.firstWhere(
                             (v) => v.release == newValue,
@@ -122,45 +167,54 @@ class ImageCard extends ConsumerWidget {
                               .read(selectedImageProvider(imageKey).notifier)
                               .set(newImage);
                         }
-                      }
-                    : null,
+                      },
               ),
             ),
             const SizedBox(height: 8),
             const SizedBox(height: 16),
             Row(children: [
               TextButton(
-                onPressed: () {
-                  final name = ref.read(randomNameProvider);
-                  final alias = selectedImage.aliases.first;
-                  final launchRequest = LaunchRequest(
-                    instanceName: name,
-                    image: alias,
-                    numCores: defaultCpus,
-                    memSize: '${defaultRam}B',
-                    diskSpace: '${defaultDisk}B',
-                    remoteName: selectedImage.hasRemoteName()
-                        ? selectedImage.remoteName
-                        : null,
-                  );
+                onPressed: isDisabled
+                    ? null
+                    : () {
+                        final name = ref.read(randomNameProvider);
+                        final alias = selectedImage.aliases.first;
+                        final launchRequest = LaunchRequest(
+                          instanceName: name,
+                          image: alias,
+                          numCores: defaultCpus,
+                          memSize: '${defaultRam}B',
+                          diskSpace: '${defaultDisk}B',
+                          remoteName: selectedImage.hasRemoteName()
+                              ? selectedImage.remoteName
+                              : null,
+                        );
 
-                  initiateLaunchFlow(ref, launchRequest);
-                },
+                        initiateLaunchFlow(ref, launchRequest);
+                      },
                 child: const Text('Launch'),
               ),
               const SizedBox(width: 8),
               OutlinedButton(
-                onPressed: () {
-                  ref.read(launchingImageProvider.notifier).state =
-                      selectedImage;
-                  Scaffold.of(context).openEndDrawer();
-                },
+                onPressed: isDisabled
+                    ? null
+                    : () {
+                        ref.read(launchingImageProvider.notifier).state =
+                            selectedImage;
+                        Scaffold.of(context).openEndDrawer();
+                      },
                 child: const Text('Configure'),
               ),
             ]),
           ],
         ),
       ),
+    );
+
+    if (!isDisabled) return card;
+    return Tooltip(
+      message: disabledReason,
+      child: card,
     );
   }
 }

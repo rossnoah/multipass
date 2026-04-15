@@ -29,8 +29,6 @@
 
 #include <QUrl>
 
-#include <unordered_set>
-
 #include <boost/json.hpp>
 
 namespace mp = multipass;
@@ -69,6 +67,12 @@ struct CustomImageHost : public Test
 
         return supported_count;
     }
+
+    int num_total_distros(const QByteArray& manifest)
+    {
+        auto images = boost::json::parse(std::string_view{manifest});
+        return static_cast<int>(images.as_object().size());
+    }
 };
 } // namespace
 
@@ -79,14 +83,18 @@ TEST_F(CustomImageHost, iteratesOverAllEntries)
     mp::CustomVMImageHost host{&mock_url_downloader};
     host.update_manifests(false);
 
-    std::unordered_set<std::string> ids;
-    auto action = [&ids](const std::string& remote, const mp::VMImageInfo& info) {
-        ids.insert(info.id.toStdString());
+    int supported_count = 0;
+    int disabled_count = 0;
+    auto action = [&](const std::string& remote, const mp::VMImageInfo& info) {
+        if (info.disabled_reason.isEmpty())
+            ++supported_count;
+        else
+            ++disabled_count;
     };
     host.for_each_entry_do(action);
 
-    int supported_count = num_images_for_arch(payload);
-    EXPECT_EQ(ids.size(), supported_count);
+    EXPECT_EQ(supported_count, num_images_for_arch(payload));
+    EXPECT_EQ(supported_count + disabled_count, num_total_distros(payload));
 }
 
 TEST_F(CustomImageHost, allImagesForNoRemoteReturnsAppropriateMatches)
@@ -100,6 +108,23 @@ TEST_F(CustomImageHost, allImagesForNoRemoteReturnsAppropriateMatches)
     int supported_count = num_images_for_arch(payload);
 
     EXPECT_EQ(images.size(), supported_count);
+}
+
+TEST_F(CustomImageHost, allImagesForAllowUnsupportedIncludesDisabled)
+{
+    EXPECT_CALL(mock_url_downloader, download(_, _)).WillOnce(Return(payload));
+    mp::CustomVMImageHost host{&mock_url_downloader};
+
+    host.update_manifests(false);
+
+    auto images = host.all_images_for("", true);
+
+    EXPECT_EQ(static_cast<int>(images.size()), num_total_distros(payload));
+    for (const auto& info : images)
+    {
+        const bool has_reason = !info.disabled_reason.isEmpty();
+        EXPECT_EQ(has_reason, !info.supported);
+    }
 }
 
 TEST_F(CustomImageHost, allInfoForNoRemoteReturnsOneAliasMatch)
@@ -138,7 +163,8 @@ TEST_F(CustomImageHost, resolvesAliasesForAllDistros)
     EXPECT_EQ(host.all_info_for(make_query("rockylinux", "")).size(), 1u);
 
     // Arch only ships x86_64 upstream; on other architectures the manifest
-    // entry is skipped via UnsupportedArchException, so the alias does not resolve.
+    // entry is retained as a disabled record but hidden from info_for when
+    // allow_unsupported is false, so the alias does not resolve by default.
     const size_t expected_arch_matches = (host_arch == "x86_64") ? 1u : 0u;
     EXPECT_EQ(host.all_info_for(make_query("arch", "")).size(), expected_arch_matches);
 }

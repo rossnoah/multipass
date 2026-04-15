@@ -106,17 +106,27 @@ List<Widget> _groupAndCreateCards(List<ImageInfo> images, double cardWidth) {
     return !isCore(image) && !isUbuntu(image);
   }
 
+  bool isDisabled(ImageInfo image) {
+    return image.hasDisabledReason() && image.disabledReason.isNotEmpty;
+  }
+
+  int disabledLast(ImageInfo a, ImageInfo b) {
+    final aDisabled = isDisabled(a) ? 1 : 0;
+    final bDisabled = isDisabled(b) ? 1 : 0;
+    if (aDisabled != bDisabled) return aDisabled - bDisabled;
+    return b.release.compareTo(a.release);
+  }
+
   final ubuntuImages = images
       .where((i) => isUbuntu(i) && !isCore(i))
-      .sorted((a, b) => b.release.compareTo(a.release));
+      .sorted(disabledLast);
 
   final coreImages = images
       .where((i) => isUbuntu(i) && isCore(i))
-      .sorted((a, b) => b.release.compareTo(a.release));
+      .sorted(disabledLast);
 
-  final otherImages = images
-      .where((i) => isOther(i))
-      .sorted((a, b) => b.release.compareTo(a.release));
+  final otherImages =
+      images.where((i) => isOther(i)).sorted(disabledLast);
 
   return [
     if (ubuntuImages.isNotEmpty)

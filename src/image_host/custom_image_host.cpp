@@ -84,11 +84,47 @@ std::vector<mp::VMImageInfo> fetch_image_info(const QString& arch,
             }
             catch (mp::UnsupportedArchException&)
             {
-                mpl::debug(category,
-                           "Skipping unsupported distro '{}' for arch '{}'",
-                           distro_name,
-                           arch);
-                continue;
+                try
+                {
+                    const auto& distro = value.as_object();
+                    QStringList aliases = value_to<QString>(distro.at("aliases"))
+                                              .split(",", Qt::SkipEmptyParts);
+                    for (QString& alias : aliases)
+                        alias = alias.trimmed();
+
+                    QStringList available_arches;
+                    for (const auto& item : distro.at("items").as_object())
+                        available_arches.append(
+                            QString::fromStdString(std::string{item.key()}));
+
+                    const QString reason =
+                        QString{"Not available for %1 (supported: %2)"}
+                            .arg(arch)
+                            .arg(available_arches.join(", "));
+
+                    result.push_back(mp::VMImageInfo{
+                        aliases,
+                        value_to<QString>(distro.at("os")),
+                        value_to<QString>(distro.at("release")),
+                        value_to<QString>(distro.at("release_codename")),
+                        value_to<QString>(distro.at("release_title")),
+                        false,
+                        QString{},
+                        QString{},
+                        QString{},
+                        QString{},
+                        -1,
+                        false,
+                        reason});
+                }
+                catch (const std::exception& e)
+                {
+                    mpl::debug(category,
+                               "Skipping malformed distro '{}' for arch '{}': {}",
+                               distro_name,
+                               arch,
+                               e.what());
+                }
             }
         }
         return result;
@@ -130,6 +166,9 @@ std::optional<mp::VMImageInfo> mp::CustomVMImageHost::info_for(const Query& quer
     if (it == custom_manifest->image_records.end())
         return std::nullopt;
 
+    if (!it->second->disabled_reason.isEmpty() && !query.allow_unsupported)
+        return std::nullopt;
+
     return *it->second;
 }
 
@@ -148,7 +187,19 @@ std::vector<mp::VMImageInfo> mp::CustomVMImageHost::all_images_for(const std::st
                                                                    const bool allow_unsupported)
 {
     if (auto custom_manifest = manifest_from(remote_name))
-        return custom_manifest->products;
+    {
+        if (allow_unsupported)
+            return custom_manifest->products;
+
+        std::vector<mp::VMImageInfo> supported;
+        supported.reserve(custom_manifest->products.size());
+        for (const auto& info : custom_manifest->products)
+        {
+            if (info.disabled_reason.isEmpty())
+                supported.push_back(info);
+        }
+        return supported;
+    }
 
     return {};
 }

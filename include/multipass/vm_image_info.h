@@ -41,6 +41,7 @@ struct VMImageInfo
     QString version;
     int64_t size;
     bool verify;
+    QString disabled_reason;
 
     friend inline bool operator==(const VMImageInfo& a, const VMImageInfo& b) = default;
 };
@@ -73,6 +74,7 @@ inline VMImageInfo tag_invoke(const boost::json::value_to_tag<VMImageInfo>&,
             "",
             value_to<QString>(arch_json->at("version")),
             lookup_or<int>(*arch_json, "size", -1),
-            true};
+            true,
+            QString{}};
 }
 } // namespace multipass

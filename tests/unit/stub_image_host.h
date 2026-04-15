@@ -28,7 +28,7 @@ struct StubVMImageHost final : public multipass::VMImageHost
     std::optional<multipass::VMImageInfo> info_for(const multipass::Query& query) override
     {
         return std::optional<multipass::VMImageInfo>{
-            VMImageInfo{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, -1, {}}};
+            VMImageInfo{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, -1, {}, {}}};
     };
 
     std::vector<std::pair<std::string, multipass::VMImageInfo>> all_info_for(
