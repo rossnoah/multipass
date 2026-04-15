@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fpdart/fpdart.dart';
 
 import '../close_terminal_dialog.dart';
+import '../distro_registry.dart';
 import '../providers.dart';
 import 'terminal.dart';
 
@@ -78,32 +79,20 @@ class Tab extends StatelessWidget {
   });
 
   Widget _buildIcon(String os) {
-    final osl = os.toLowerCase();
-    // Tuple: (asset path, background color, svg color)
-    final iconData = osl.contains('ubuntu')
-        ? ('assets/ubuntu.svg', const Color(0xffE95420), Colors.white)
-        : osl.contains('debian')
-            ? ('assets/debian.svg', null, null)
-            : osl.contains('fedora')
-                ? ('assets/fedora.svg', null, null)
-                : ('assets/ubuntu.svg', const Color(0xffE95420), Colors.white);
-
+    final info = distroInfoForReleaseString(os);
+    final fg = info.tabForeground;
     return Container(
       alignment: Alignment.center,
-      color: iconData.$2,
+      color: info.tabBackground,
       margin: const EdgeInsets.symmetric(horizontal: 10),
       width: 17,
       height: 17,
-      child: iconData.$3 == null
-          ? SvgPicture.asset(
-              iconData.$1,
-              width: 12,
-            )
-          : SvgPicture.asset(
-              iconData.$1,
-              width: 12,
-              colorFilter: ColorFilter.mode(iconData.$3!, BlendMode.srcIn),
-            ),
+      child: SvgPicture.asset(
+        info.logoAsset,
+        width: 12,
+        colorFilter:
+            fg == null ? null : ColorFilter.mode(fg, BlendMode.srcIn),
+      ),
     );
   }
 

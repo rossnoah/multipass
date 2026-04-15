@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide ImageInfo;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../distro_registry.dart';
 import '../providers.dart';
 import 'catalogue.dart';
 import 'launch_form.dart';
@@ -19,37 +20,8 @@ class ImageCard extends ConsumerWidget {
     required this.imageKey,
   });
 
-  String _getParentImageLogo(String os) {
-    return switch (os.toLowerCase()) {
-      'ubuntu' => 'assets/ubuntu.svg',
-      'debian' => 'assets/debian.svg',
-      'fedora' => 'assets/fedora.svg',
-      _ => 'assets/ubuntu.svg',
-    };
-  }
-
-  String _getDisplayTitle(ImageInfo parentImage) {
-    return switch (parentImage.os.toLowerCase()) {
-      'ubuntu' when parentImage.aliases.any((a) => a.contains('core')) =>
-        'Ubuntu Core',
-      'ubuntu' => 'Ubuntu Server',
-      'debian' => 'Debian',
-      'fedora' => 'Fedora',
-      _ => parentImage.os, // Default case: return the OS name as-is
-    };
-  }
-
-  String _getDescription(ImageInfo parentImage) {
-    return switch (parentImage.os.toLowerCase()) {
-      'ubuntu' when parentImage.aliases.any((a) => a.contains('core')) =>
-        'Ubuntu operating system optimised for IoT and Edge',
-      'ubuntu' =>
-        'Ubuntu operating system designed as a backbone for the internet',
-      'debian' => 'Debian official cloud image',
-      'fedora' => 'Fedora Cloud Edition',
-      _ => '',
-    };
-  }
+  DistroInfo _distroInfo(ImageInfo parentImage) =>
+      distroInfoFor(parentImage.os, aliases: parentImage.aliases);
 
   String _getVersionLabel(ImageInfo version) {
     return version.release.toLowerCase() == version.codename.toLowerCase()
@@ -83,28 +55,36 @@ class ImageCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SvgPicture.asset(
-                  _getParentImageLogo(parentImage.os),
-                  height: 24,
-                  fit: BoxFit.contain,
-                  semanticsLabel: '${parentImage.os} logo',
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _getDisplayTitle(parentImage),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 24,
+            Builder(builder: (_) {
+              final info = _distroInfo(parentImage);
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SvgPicture.asset(
+                        info.logoAsset,
+                        height: 24,
+                        fit: BoxFit.contain,
+                        semanticsLabel: '${info.displayTitle} logo',
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        info.displayTitle,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(_getDescription(parentImage),
-                style: const TextStyle(fontWeight: FontWeight.w300)),
+                  const SizedBox(height: 12),
+                  Text(info.description,
+                      style: const TextStyle(fontWeight: FontWeight.w300)),
+                ],
+              );
+            }),
             const SizedBox(height: 16),
             const Spacer(),
             Container(
