@@ -97,5 +97,26 @@
         "size": 542651904
       }
     }
+  },
+  "Kali": {
+    "aliases": "kali, kalilinux, kali-linux",
+    "os": "Kali",
+    "release": "2026.1",
+    "release_codename": "2026.1",
+    "release_title": "2026.1",
+    "items": {
+      "x86_64": {
+        "image_location": "https://example.com/kali-2026.1-amd64.tar.xz",
+        "id": "kali-2026.1-hash-x86_64",
+        "version": "2026.1",
+        "size": 200605491
+      },
+      "arm64": {
+        "image_location": "https://example.com/kali-2026.1-arm64.tar.xz",
+        "id": "kali-2026.1-hash-arm64",
+        "version": "2026.1",
+        "size": 187040972
+      }
+    }
   }
 }

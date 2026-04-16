@@ -1,4 +1,4 @@
-"""Offline tests for Arch, AlmaLinux, Rocky scrapers — mocks aiohttp.
+"""Offline tests for Arch, AlmaLinux, Rocky, Kali scrapers — mocks aiohttp.
 
 These tests avoid network I/O so they can run in CI without reaching
 upstream mirrors. Live end-to-end behavior is covered by the scheduled
@@ -14,6 +14,7 @@ from scraper.models import ScraperResult
 from scraper.scrapers.arch import ArchScraper
 from scraper.scrapers.almalinux import AlmaLinuxScraper
 from scraper.scrapers.rocky import RockyScraper
+from scraper.scrapers.kali import KaliScraper
 
 
 class _FakeResponse:
@@ -132,3 +133,46 @@ def test_rocky_scraper_raises_when_no_candidate_has_images():
     with patch("scraper.scrapers.rocky.aiohttp.ClientSession", return_value=session):
         with pytest.raises(RuntimeError):
             _run(RockyScraper().fetch())
+
+
+def test_kali_scraper_builds_valid_result():
+    listing = '<a href="current/">current/</a> <a href="kali-2026.1/">kali-2026.1/</a> <a href="kali-2025.4/">kali-2025.4/</a>'
+    sha256sums = (
+        "a" * 64 + "  kali-linux-2026.1-cloud-genericcloud-amd64.tar.xz\n"
+        + "b" * 64 + "  kali-linux-2026.1-cloud-genericcloud-arm64.tar.xz\n"
+    )
+
+    responses = {
+        ("GET", "https://kali.download/cloud-images/"): _FakeResponse(text=listing),
+        ("GET", "https://kali.download/cloud-images/kali-2026.1/SHA256SUMS"):
+            _FakeResponse(text=sha256sums),
+        ("HEAD", "https://kali.download/cloud-images/kali-2026.1/kali-linux-2026.1-cloud-genericcloud-amd64.tar.xz"):
+            _FakeResponse(headers={"Content-Length": "200605491"}),
+        ("HEAD", "https://kali.download/cloud-images/kali-2026.1/kali-linux-2026.1-cloud-genericcloud-arm64.tar.xz"):
+            _FakeResponse(headers={"Content-Length": "187040972"}),
+    }
+    session = _fake_session_for_responses(responses)
+
+    with patch("scraper.scrapers.kali.aiohttp.ClientSession", return_value=session):
+        result = _run(KaliScraper().fetch())
+
+    ScraperResult(**result)
+    assert result["os"] == "Kali"
+    assert result["release"] == "2026.1"
+    assert set(result["items"]) == {"x86_64", "arm64"}
+    assert result["items"]["x86_64"]["id"] == "a" * 64
+    assert result["items"]["arm64"]["id"] == "b" * 64
+    assert result["items"]["x86_64"]["size"] == 200605491
+
+
+def test_kali_scraper_raises_when_no_versions_found():
+    listing = '<a href="current/">current/</a>'
+
+    responses = {
+        ("GET", "https://kali.download/cloud-images/"): _FakeResponse(text=listing),
+    }
+    session = _fake_session_for_responses(responses)
+
+    with patch("scraper.scrapers.kali.aiohttp.ClientSession", return_value=session):
+        with pytest.raises(RuntimeError):
+            _run(KaliScraper().fetch())

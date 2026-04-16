@@ -24,6 +24,7 @@ fedora = "scraper.scrapers.fedora:FedoraScraper"
 almalinux = "scraper.scrapers.almalinux:AlmaLinuxScraper"
 rocky = "scraper.scrapers.rocky:RockyScraper"
 arch = "scraper.scrapers.arch:ArchScraper"
+kali = "scraper.scrapers.kali:KaliScraper"
 
 [tool.setuptools.packages.find]
 where = ["."]

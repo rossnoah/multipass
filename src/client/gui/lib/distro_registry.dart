@@ -70,6 +70,11 @@ const _registry = <String, DistroInfo>{
     displayTitle: 'Arch Linux',
     description: 'Lightweight, rolling-release Linux',
   ),
+  'kali': DistroInfo(
+    logoAsset: 'assets/kali.svg',
+    displayTitle: 'Kali Linux',
+    description: 'Advanced penetration testing and security auditing distribution',
+  ),
 };
 
 /// Returns presentation info for [os] (the daemon's `VMImageInfo::os`).

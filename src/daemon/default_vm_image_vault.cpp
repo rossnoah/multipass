@@ -29,6 +29,7 @@
 #include <multipass/process/qemuimg_process_spec.h>
 #include <multipass/query.h>
 #include <multipass/rpc/multipass.grpc.pb.h>
+#include <multipass/tar_image_extractor.h>
 #include <multipass/url_downloader.h>
 #include <multipass/utils.h>
 #include <multipass/vm_image.h>
@@ -222,6 +223,12 @@ mp::VMImage mp::DefaultVMImageVault::fetch_image(const FetchType& fetch_type,
         else
         {
             source_image = image_instance_from(source_image, save_dir);
+        }
+
+        if (source_image.image_path.extension() == ".tar")
+        {
+            source_image.image_path =
+                mp::extract_first_file_from_tar(source_image.image_path, true);
         }
 
         vm_image = prepare(source_image);
@@ -621,6 +628,12 @@ mp::VMImage mp::DefaultVMImageVault::download_and_prepare_source_image(
         {
             source_image.image_path =
                 MP_IMAGE_VAULT_UTILS.extract_file(source_image.image_path, monitor, true);
+        }
+
+        if (source_image.image_path.extension() == ".tar")
+        {
+            source_image.image_path =
+                mp::extract_first_file_from_tar(source_image.image_path, true);
         }
 
         auto prepared_image = prepare(source_image);

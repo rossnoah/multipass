@@ -188,6 +188,48 @@
         "release_codename": "Bookworm",
         "release_title": "12"
     },
+    "Kali": {
+        "aliases": "kali, kalilinux, kali-linux",
+        "items": {
+            "arm64": {
+                "id": "972a8c150d1ade4ee99981a702f3a203636dc51c1d423c299c6bcaa606fc4868",
+                "image_location": "https://kali.download/cloud-images/kali-2026.1/kali-linux-2026.1-cloud-genericcloud-arm64.tar.xz",
+                "size": 187040972,
+                "version": "2026.1"
+            },
+            "x86_64": {
+                "id": "01ed079d1d74263be874129b7d33f71f3138041fce8f662ed53cc6313b4e2edd",
+                "image_location": "https://kali.download/cloud-images/kali-2026.1/kali-linux-2026.1-cloud-genericcloud-amd64.tar.xz",
+                "size": 200605491,
+                "version": "2026.1"
+            }
+        },
+        "os": "Kali",
+        "release": "2026.1",
+        "release_codename": "2026.1",
+        "release_title": "2026.1"
+    },
+    "Kali-2025.4": {
+        "aliases": "kali-2025.4",
+        "items": {
+            "arm64": {
+                "id": "252cb5b3cc2e7b5e72d464cd1efe66d43301c9e95a6eaacbc5db1ac89430d562",
+                "image_location": "https://kali.download/cloud-images/kali-2025.4/kali-linux-2025.4-cloud-genericcloud-arm64.tar.xz",
+                "size": 187774771,
+                "version": "2025.4"
+            },
+            "x86_64": {
+                "id": "649f20a4703f2324c0a5fa286a9260a5eb98d7f5d554d9aa179f284e8338fe8f",
+                "image_location": "https://kali.download/cloud-images/kali-2025.4/kali-linux-2025.4-cloud-genericcloud-amd64.tar.xz",
+                "size": 203017626,
+                "version": "2025.4"
+            }
+        },
+        "os": "Kali",
+        "release": "2025.4",
+        "release_codename": "2025.4",
+        "release_title": "2025.4"
+    },
     "Fedora": {
         "aliases": "fedora",
         "items": {

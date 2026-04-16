@@ -377,12 +377,17 @@ class LaunchingNotification extends ConsumerWidget {
           switch (l.whichCreateOneof()) {
             case LaunchReply_CreateOneof.launchProgress:
               final progressType = l.launchProgress.type;
-              if (progressType == LaunchProgress_ProgressTypes.VERIFY) {
-                return ('Verifying image', false);
+              final percentage = l.launchProgress.percentComplete;
+              switch (progressType) {
+                case LaunchProgress_ProgressTypes.IMAGE:
+                  return ('Downloading image $percentage%', true);
+                case LaunchProgress_ProgressTypes.EXTRACT:
+                  return ('Extracting image $percentage%', true);
+                case LaunchProgress_ProgressTypes.VERIFY:
+                  return ('Verifying image', false);
+                case LaunchProgress_ProgressTypes.WAITING:
+                  return ('Preparing image', false);
               }
-
-              final downloadPercentage = l.launchProgress.percentComplete;
-              return ('Downloading image $downloadPercentage%', true);
             case LaunchReply_CreateOneof.createMessage:
               return (l.createMessage, false);
             default:

@@ -161,6 +161,9 @@ TEST_F(CustomImageHost, resolvesAliasesForAllDistros)
     EXPECT_EQ(host.all_info_for(make_query("almalinux", "")).size(), 1u);
     EXPECT_EQ(host.all_info_for(make_query("rocky", "")).size(), 1u);
     EXPECT_EQ(host.all_info_for(make_query("rockylinux", "")).size(), 1u);
+    EXPECT_EQ(host.all_info_for(make_query("kali", "")).size(), 1u);
+    EXPECT_EQ(host.all_info_for(make_query("kalilinux", "")).size(), 1u);
+    EXPECT_EQ(host.all_info_for(make_query("kali-linux", "")).size(), 1u);
 
     // Arch only ships x86_64 upstream; on other architectures the manifest
     // entry is retained as a disabled record but hidden from info_for when

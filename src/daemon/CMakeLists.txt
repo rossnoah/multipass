@@ -43,6 +43,7 @@ target_link_libraries(daemon
   utils
   Qt6::Core
   Qt6::Network
+  tar_extractor
   xz_image_decoder
   yaml-cpp::yaml-cpp)
 
