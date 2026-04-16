@@ -23,10 +23,18 @@ class ImageCard extends ConsumerWidget {
   DistroInfo _distroInfo(ImageInfo parentImage) =>
       distroInfoFor(parentImage.os, aliases: parentImage.aliases);
 
+  static final _numericOnly = RegExp(r'^\d+(\.\d+)*$');
+
   String _getVersionLabel(ImageInfo version) {
-    return version.release.toLowerCase() == version.codename.toLowerCase()
+    final label = version.release.toLowerCase() == version.codename.toLowerCase()
         ? version.release
         : '${version.release} (${version.codename})';
+    // Pure-number labels (AlmaLinux 10, Fedora 43, Rocky 8) are ambiguous on
+    // their own; prefix with the OS name so the dropdown reads naturally.
+    if (_numericOnly.hasMatch(label)) {
+      return '${version.os} $label';
+    }
+    return label;
   }
 
   @override

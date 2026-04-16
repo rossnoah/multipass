@@ -33,25 +33,43 @@ class RockyScraper(BaseScraper):
         self, session: aiohttp.ClientSession, version: str, label: str
     ) -> tuple[str, dict]:
         rocky_arch = ARCH_MAP.get(label, label)
-        filename = f"Rocky-{version}-GenericCloud.latest.{rocky_arch}.qcow2"
-        image_url = f"{BASE_URL}{version}/images/{rocky_arch}/{filename}"
-        checksum_url = f"{image_url}.CHECKSUM"
+        # Rocky 10 renamed the base cloud image from "GenericCloud" to
+        # "GenericCloud-Base" (alongside a new "GenericCloud-LVM" variant).
+        # Try the current name first, then fall back to the legacy one.
+        filename_candidates = [
+            f"Rocky-{version}-GenericCloud-Base.latest.{rocky_arch}.qcow2",
+            f"Rocky-{version}-GenericCloud.latest.{rocky_arch}.qcow2",
+        ]
 
-        text = await self._fetch_text(session, checksum_url)
-        m = re.search(rf"SHA256\s*\(\s*{re.escape(filename)}\s*\)\s*=\s*([0-9a-f]+)", text)
-        if not m:
-            m = re.search(rf"([0-9a-f]{{64}})\s+\*?{re.escape(filename)}", text)
-        if not m:
-            raise RuntimeError(f"SHA256 not found for {filename}")
-        sha256 = m.group(1)
+        last_error: Exception | None = None
+        for filename in filename_candidates:
+            image_url = f"{BASE_URL}{version}/images/{rocky_arch}/{filename}"
+            checksum_url = f"{image_url}.CHECKSUM"
+            try:
+                text = await self._fetch_text(session, checksum_url)
+            except aiohttp.ClientResponseError as e:
+                if e.status == 404:
+                    last_error = e
+                    continue
+                raise
+            m = re.search(rf"SHA256\s*\(\s*{re.escape(filename)}\s*\)\s*=\s*([0-9a-f]+)", text)
+            if not m:
+                m = re.search(rf"([0-9a-f]{{64}})\s+\*?{re.escape(filename)}", text)
+            if not m:
+                raise RuntimeError(f"SHA256 not found for {filename}")
+            sha256 = m.group(1)
 
-        size = await self._head_content_length(session, image_url)
-        return label, {
-            "image_location": image_url,
-            "id": sha256,
-            "version": version,
-            "size": size or 0,
-        }
+            size = await self._head_content_length(session, image_url)
+            return label, {
+                "image_location": image_url,
+                "id": sha256,
+                "version": version,
+                "size": size or 0,
+            }
+
+        raise RuntimeError(
+            f"No Rocky image found for {version} {rocky_arch}: {last_error}"
+        )
 
     async def fetch(self) -> dict:
         async with aiohttp.ClientSession() as session:

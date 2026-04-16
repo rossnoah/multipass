@@ -128,6 +128,16 @@ List<Widget> _groupAndCreateCards(List<ImageInfo> images, double cardWidth) {
   final otherImages =
       images.where((i) => isOther(i)).sorted(disabledLast);
 
+  // Group non-Ubuntu distros by OS so multiple versions of the same distro
+  // share a single card with a version dropdown, like Ubuntu.
+  final otherGroups = groupBy(otherImages, (i) => i.os.toLowerCase());
+  // Preserve the sorted order of the first occurrence of each OS.
+  final seenOs = <String>{};
+  final orderedOtherKeys = [
+    for (final image in otherImages)
+      if (seenOs.add(image.os.toLowerCase())) image.os.toLowerCase(),
+  ];
+
   return [
     if (ubuntuImages.isNotEmpty)
       ImageCard(
@@ -146,11 +156,12 @@ List<Widget> _groupAndCreateCards(List<ImageInfo> images, double cardWidth) {
         versions: coreImages.toList(),
         width: cardWidth,
       ),
-    ...otherImages.map((image) {
+    ...orderedOtherKeys.map((osKey) {
+      final group = otherGroups[osKey]!;
       return ImageCard(
-        imageKey: '${image.os}-${image.release}',
-        parentImage: image,
-        versions: [image],
+        imageKey: '$osKey-${group.first.release}',
+        parentImage: group.first,
+        versions: group,
         width: cardWidth,
       );
     }),

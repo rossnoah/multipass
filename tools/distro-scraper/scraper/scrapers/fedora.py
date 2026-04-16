@@ -155,7 +155,7 @@ class FedoraScraper(BaseScraper):
             return {
                 "aliases": "fedora",
                 "os": "Fedora",
-                "release": "",
+                "release": version,
                 "release_codename": version,
                 "release_title": version,
                 "items": items,
